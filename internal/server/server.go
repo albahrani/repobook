@@ -11,6 +11,7 @@ import (
 	"repobook/internal/ignore"
 	"repobook/internal/render"
 	"repobook/internal/scan"
+	"repobook/internal/search"
 	"repobook/internal/util"
 	"repobook/internal/watch"
 	"repobook/internal/web"
@@ -82,6 +83,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/tree", s.handleTree)
 	mux.HandleFunc("/api/home", s.handleHome)
 	mux.HandleFunc("/api/render", s.handleRender)
+	mux.HandleFunc("/api/search", s.handleSearch)
 
 	// WebSocket
 	mux.HandleFunc("/ws", s.hub.ServeWS)
@@ -203,6 +205,26 @@ func (s *Server) handleRepoAsset(w http.ResponseWriter, r *http.Request) {
 	// Light caching; live reload will refresh content anyway.
 	w.Header().Set("Cache-Control", "no-cache")
 	http.ServeFile(w, r, abs)
+}
+
+func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	q := r.URL.Query().Get("q")
+	res, err := search.Ripgrep(s.rootAbs, q, 200)
+	if err != nil {
+		if err == search.ErrRipgrepNotFound {
+			http.Error(w, "ripgrep (rg) not found on PATH", http.StatusNotImplemented)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, res)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

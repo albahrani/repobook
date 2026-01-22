@@ -11,7 +11,12 @@
     <div id="app" class="app">
       <aside class="pane nav">
         <div class="pane-title">Documents</div>
+        <div class="nav-search">
+          <input id="search" class="search-input" type="search" placeholder="Search markdown…" autocomplete="off" />
+          <div id="searchMeta" class="search-meta"></div>
+        </div>
         <div id="nav" class="nav-tree" aria-label="Repository navigation"></div>
+        <div id="results" class="search-results" aria-label="Search results" hidden></div>
       </aside>
 
       <main class="pane viewer">

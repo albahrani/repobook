@@ -4,11 +4,16 @@
   const elToc = document.getElementById('toc')
   const elCrumb = document.getElementById('crumb')
   const elStatus = document.getElementById('status')
+	const elSearch = document.getElementById('search')
+	const elResults = document.getElementById('results')
+	const elSearchMeta = document.getElementById('searchMeta')
 
 	let tree = null
 	let currentPath = ''
 	let currentMTime = 0
 	let scrollSpyDisconnect = null
+	let searchTimer = null
+	let lastQuery = ''
 
   function setStatus(msg) {
     elStatus.textContent = msg || ''
@@ -61,6 +66,69 @@
     if (!tree) return
     elNav.innerHTML = renderTreeNode(tree)
   }
+
+	function setSearchMeta(msg) {
+		if (!elSearchMeta) return
+		elSearchMeta.textContent = msg || ''
+	}
+
+	function showResults(show) {
+		if (!elResults) return
+		if (show) {
+			elNav.hidden = true
+			elResults.hidden = false
+		} else {
+			elResults.hidden = true
+			elNav.hidden = false
+		}
+	}
+
+	function renderResults(data) {
+		if (!elResults) return
+		if (!data || !data.results || !data.results.length) {
+			elResults.innerHTML = '<div class="toc-empty">No results</div>'
+			return
+		}
+		elResults.innerHTML = data.results.map((r) => {
+			const href = `/file/${encodeURIComponent(r.path)}`
+			return (
+				`<a class="result" href="${href}">` +
+					`<div class="result-top">` +
+						`<div class="result-path">${esc(r.path)}</div>` +
+						`<div class="result-line">L${esc(r.line)}</div>` +
+					`</div>` +
+					`<div class="result-preview">${esc(r.preview)}</div>` +
+				`</a>`
+			)
+		}).join('')
+		if (data.truncated) {
+			elResults.innerHTML += '<div class="toc-empty">Results truncated</div>'
+		}
+	}
+
+	async function runSearch(q) {
+		q = (q || '').trim()
+		lastQuery = q
+		if (!q) {
+			setSearchMeta('')
+			showResults(false)
+			return
+		}
+		setSearchMeta('Searching…')
+		showResults(true)
+		try {
+			const data = await fetchJSON(`/api/search?q=${encodeURIComponent(q)}`)
+			if (lastQuery !== q) return
+			renderResults(data)
+			setSearchMeta(`${data.results.length}${data.truncated ? '+' : ''} results`)
+		} catch (err) {
+			if (lastQuery !== q) return
+			if (elResults) {
+				elResults.innerHTML = `<pre class="error">${esc(err && err.message ? err.message : String(err))}</pre>`
+			}
+			setSearchMeta('Search failed')
+		}
+	}
 
 	function renderTOC(toc) {
 		if (!toc || !toc.length) {
@@ -212,6 +280,10 @@
         const u = new URL(href, location.origin)
         if (u.origin === location.origin && u.pathname.startsWith('/file/')) {
           e.preventDefault()
+				if (elSearch && elSearch.value) {
+					elSearch.value = ''
+					runSearch('')
+				}
           navigate(u.pathname + u.hash, false)
 	}
       } catch (_) {
@@ -223,6 +295,17 @@
       route()
     })
   }
+
+	function setupSearch() {
+		if (!elSearch) return
+		elSearch.addEventListener('input', () => {
+			const q = elSearch.value
+			if (searchTimer) clearTimeout(searchTimer)
+			searchTimer = setTimeout(() => {
+				runSearch(q)
+			}, 200)
+		})
+	}
 
   function setupLiveUpdates() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -251,6 +334,7 @@
 	async function boot() {
 		setupLinkInterception()
 		setupTOCBehavior()
+		setupSearch()
 		await loadTree()
 		await route()
 		setupLiveUpdates()
