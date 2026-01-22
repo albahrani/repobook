@@ -5,9 +5,10 @@
   const elCrumb = document.getElementById('crumb')
   const elStatus = document.getElementById('status')
 
-  let tree = null
-  let currentPath = ''
-  let currentMTime = 0
+	let tree = null
+	let currentPath = ''
+	let currentMTime = 0
+	let scrollSpyDisconnect = null
 
   function setStatus(msg) {
     elStatus.textContent = msg || ''
@@ -61,17 +62,81 @@
     elNav.innerHTML = renderTreeNode(tree)
   }
 
-  function renderTOC(toc) {
-    if (!toc || !toc.length) {
-      elToc.innerHTML = '<div class="toc-empty">No headings</div>'
-      return
-    }
-    elToc.innerHTML = toc.map((it) => {
-      const pad = Math.max(0, Math.min(5, it.level - 1))
-      const href = it.id ? `#${encodeURIComponent(it.id)}` : '#'
-      return `<a class="toc-item lvl-${it.level}" style="padding-left:${pad * 12}px" href="${href}">${esc(it.title)}</a>`
-    }).join('')
-  }
+	function renderTOC(toc) {
+		if (!toc || !toc.length) {
+			elToc.innerHTML = '<div class="toc-empty">No headings</div>'
+			return
+		}
+		elToc.innerHTML = toc.map((it) => {
+			const pad = Math.max(0, Math.min(5, it.level - 1))
+			const href = it.id ? `#${encodeURIComponent(it.id)}` : '#'
+			const data = it.id ? ` data-id="${esc(it.id)}"` : ''
+			return `<a class="toc-item lvl-${it.level}" style="padding-left:${pad * 12}px" href="${href}"${data}>${esc(it.title)}</a>`
+		}).join('')
+	}
+
+	function setupTOCBehavior() {
+		elToc.addEventListener('click', (e) => {
+			const a = e.target && e.target.closest ? e.target.closest('a.toc-item') : null
+			if (!a) return
+			const id = a.getAttribute('data-id')
+			if (!id) return
+			e.preventDefault()
+			// Update URL hash without triggering a full route.
+			history.replaceState({}, '', `${location.pathname}#${encodeURIComponent(id)}`)
+			const el = document.getElementById(id)
+			if (el) el.scrollIntoView({ block: 'start' })
+		})
+	}
+
+	function setupScrollSpy() {
+		if (scrollSpyDisconnect) {
+			scrollSpyDisconnect()
+			scrollSpyDisconnect = null
+		}
+		const headings = elViewer.querySelectorAll('h1[id],h2[id],h3[id],h4[id],h5[id],h6[id]')
+		if (!headings.length) return
+
+		const linksByID = new Map()
+		elToc.querySelectorAll('a.toc-item[data-id]').forEach((a) => {
+			linksByID.set(a.getAttribute('data-id'), a)
+		})
+
+		function setActive(id) {
+			elToc.querySelectorAll('a.toc-item.is-active').forEach((x) => x.classList.remove('is-active'))
+			const a = linksByID.get(id)
+			if (a) a.classList.add('is-active')
+		}
+
+		const io = new IntersectionObserver((entries) => {
+			// Choose the entry closest to the top that is intersecting.
+			let best = null
+			for (const ent of entries) {
+				if (!ent.isIntersecting) continue
+				if (!best || ent.boundingClientRect.top < best.boundingClientRect.top) {
+					best = ent
+				}
+			}
+			if (best && best.target && best.target.id) setActive(best.target.id)
+		}, {
+			root: elViewer,
+			rootMargin: '0px 0px -70% 0px',
+			threshold: [0, 1],
+		})
+
+		headings.forEach((h) => io.observe(h))
+		// Set initial active.
+		setTimeout(() => {
+			for (const h of headings) {
+				if (h.getBoundingClientRect().top >= 0) {
+					setActive(h.id)
+					break
+				}
+			}
+		}, 0)
+
+		scrollSpyDisconnect = () => io.disconnect()
+	}
 
   function setCrumb(p) {
     if (!p) {
@@ -81,7 +146,7 @@
     elCrumb.textContent = p
   }
 
-  async function loadDoc(relPath, opts) {
+	async function loadDoc(relPath, opts) {
     const anchor = (opts && opts.anchor) || ''
     setStatus('Loading…')
     const data = await fetchJSON(`/api/render?path=${encodeURIComponent(relPath)}`)
@@ -90,9 +155,10 @@
     document.title = `repobook • ${data.title || data.path}`
     setCrumb(data.path)
     elViewer.innerHTML = `<article class="markdown-body">${data.html}</article>`
-    renderTOC(data.toc || [])
-    renderTree()
-    setStatus('')
+		renderTOC(data.toc || [])
+		renderTree()
+		setupScrollSpy()
+		setStatus('')
 
     const target = anchor || location.hash
     if (target && target.startsWith('#')) {
@@ -101,7 +167,7 @@
       const el = document.getElementById(id)
       if (el) {
         setTimeout(() => el.scrollIntoView({ block: 'start' }), 0)
-      }
+	}
     }
   }
 
@@ -133,7 +199,7 @@
     await loadDoc(p)
   }
 
-  function setupLinkInterception() {
+	function setupLinkInterception() {
     document.addEventListener('click', (e) => {
       const a = e.target && e.target.closest ? e.target.closest('a') : null
       if (!a) return
@@ -147,7 +213,7 @@
         if (u.origin === location.origin && u.pathname.startsWith('/file/')) {
           e.preventDefault()
           navigate(u.pathname + u.hash, false)
-        }
+	}
       } catch (_) {
         // ignore
       }
@@ -182,12 +248,13 @@
     renderTree()
   }
 
-  async function boot() {
-    setupLinkInterception()
-    await loadTree()
-    await route()
-    setupLiveUpdates()
-  }
+	async function boot() {
+		setupLinkInterception()
+		setupTOCBehavior()
+		await loadTree()
+		await route()
+		setupLiveUpdates()
+	}
 
   boot().catch((err) => {
     setStatus('')

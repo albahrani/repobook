@@ -119,6 +119,10 @@ body {
   text-decoration: none;
 }
 .toc-item:hover { background: var(--panel-2); color: var(--text); }
+.toc-item.is-active {
+  background: rgba(9, 105, 218, 0.10);
+  color: var(--text);
+}
 .toc-empty { padding: 8px 8px; color: var(--muted); }
 
 .error {
