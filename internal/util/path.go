@@ -38,6 +38,15 @@ type Resolved struct {
 }
 
 func ResolveRepoPath(rootAbs, relURL string) (abs string, rel string, err error) {
+	// Reject any explicit parent directory segments before cleaning.
+	// This prevents surprising normalization like "../x" => "x".
+	norm := strings.ReplaceAll(relURL, "\\", "/")
+	for _, seg := range strings.Split(norm, "/") {
+		if seg == ".." {
+			return "", "", errors.New("path escapes repo root")
+		}
+	}
+
 	relURL = strings.TrimPrefix(relURL, "/")
 	relURL = path.Clean("/" + relURL)
 	relURL = strings.TrimPrefix(relURL, "/")

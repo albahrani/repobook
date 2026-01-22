@@ -103,7 +103,8 @@ func Ripgrep(rootAbs, query string, limit int) (Response, error) {
 			continue
 		}
 		preview := strings.TrimRight(ev.Data.Lines.Text, "\r\n")
-		resp.Results = append(resp.Results, Result{Path: ev.Data.Path.Text, Line: ev.Data.LineNumber, Preview: preview})
+		p := strings.ReplaceAll(ev.Data.Path.Text, "\\", "/")
+		resp.Results = append(resp.Results, Result{Path: p, Line: ev.Data.LineNumber, Preview: preview})
 		if len(resp.Results) >= limit {
 			resp.Truncated = true
 			break
