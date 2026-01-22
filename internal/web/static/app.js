@@ -47,7 +47,7 @@
       const active = node.path === currentPath ? ' is-active' : ''
       return (
         `<div class="nav-item file${active}">` +
-          `<a class="nav-link" href="/file/${encodeURIComponent(node.path)}">${esc(node.name)}</a>` +
+			  `<a class="nav-link" href="/file/${encodeURI(node.path)}">${esc(node.name)}</a>` +
         `</div>`
       )
     }
@@ -90,7 +90,7 @@
 			return
 		}
 		elResults.innerHTML = data.results.map((r) => {
-			const href = `/file/${encodeURIComponent(r.path)}`
+			const href = `/file/${encodeURI(r.path)}`
 			return (
 				`<a class="result" href="${href}">` +
 					`<div class="result-top">` +
