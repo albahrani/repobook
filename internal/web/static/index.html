@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>repobook</title>
+    <link rel="stylesheet" href="/app/styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <aside class="pane nav">
+        <div class="pane-title">Documents</div>
+        <div id="nav" class="nav-tree" aria-label="Repository navigation"></div>
+      </aside>
+
+      <main class="pane viewer">
+        <div class="viewer-top">
+          <div id="crumb" class="crumb"></div>
+          <div id="status" class="status"></div>
+        </div>
+        <div id="viewer" class="viewer-content"></div>
+      </main>
+
+      <aside class="pane toc">
+        <div class="pane-title">On This Page</div>
+        <div id="toc" class="toc-list" aria-label="Table of contents"></div>
+      </aside>
+    </div>
+    <script src="/app/app.js"></script>
+  </body>
+</html>

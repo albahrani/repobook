@@ -1,0 +1,14 @@
+*.exe
+*.dll
+*.so
+*.dylib
+
+*.test
+
+# build output
+dist/
+build/
+
+# editor
+.vscode/
+.idea/
