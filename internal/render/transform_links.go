@@ -74,11 +74,11 @@ func rewriteURLDest(curDir string, dest []byte) []byte {
 
 	// If it looks like a markdown doc (or a folder), route internally.
 	if util.LooksLikeMarkdownPath(resolved) {
-		u.Path = "/file/" + url.PathEscape(resolved)
+		u.Path = "/file/" + resolved
 		return []byte(u.String())
 	}
 
 	// Otherwise treat as repo asset.
-	u.Path = "/repo/" + url.PathEscape(resolved)
+	u.Path = "/repo/" + resolved
 	return []byte(u.String())
 }
