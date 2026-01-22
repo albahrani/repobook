@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"repobook/internal/ignore"
 	"repobook/internal/render"
 	"repobook/internal/scan"
 	"repobook/internal/util"
@@ -21,6 +22,7 @@ type Options struct {
 
 type Server struct {
 	rootAbs  string
+	ignore   *ignore.Matcher
 	renderer *render.Renderer
 	hub      *watch.Hub
 	watcher  *watch.Watcher
@@ -32,8 +34,13 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 
+	ig, err := ignore.Load(rootAbs)
+	if err != nil {
+		return nil, err
+	}
+
 	hub := watch.NewHub()
-	w, err := watch.NewWatcher(rootAbs, hub)
+	w, err := watch.NewWatcher(rootAbs, hub, ig)
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +53,7 @@ func New(opts Options) (*Server, error) {
 
 	s := &Server{
 		rootAbs:  rootAbs,
+		ignore:   ig,
 		renderer: r,
 		hub:      hub,
 		watcher:  w,
@@ -99,7 +107,7 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tree, err := scan.BuildTree(scan.Options{RootAbs: s.rootAbs})
+	tree, err := scan.BuildTree(scan.Options{RootAbs: s.rootAbs, Ignore: s.ignore})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -150,6 +158,10 @@ func (s *Server) handleRender(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+	if s.ignore != nil && resolved.Rel != "" && s.ignore.IsIgnored(resolved.Rel, false) {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
 
 	res, err := s.renderer.RenderFile(resolved.Rel)
 	if err != nil {
@@ -174,6 +186,10 @@ func (s *Server) handleRepoAsset(w http.ResponseWriter, r *http.Request) {
 
 	abs, _, err := util.ResolveRepoPath(s.rootAbs, relURL)
 	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	if s.ignore != nil && relURL != "" && s.ignore.IsIgnored(relURL, false) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}

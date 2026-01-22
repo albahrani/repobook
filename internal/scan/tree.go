@@ -7,11 +7,13 @@ import (
 	"sort"
 	"strings"
 
+	"repobook/internal/ignore"
 	"repobook/internal/util"
 )
 
 type Options struct {
 	RootAbs string
+	Ignore  *ignore.Matcher
 }
 
 type Node struct {
@@ -45,6 +47,21 @@ func BuildTree(opts Options) (Node, error) {
 			return walkErr
 		}
 
+		relOS, err := filepath.Rel(rootAbs, p)
+		if err != nil {
+			return nil
+		}
+		rel := filepath.ToSlash(relOS)
+		if rel == "." {
+			rel = ""
+		}
+		if opts.Ignore != nil && rel != "" && opts.Ignore.IsIgnored(rel, d.IsDir()) {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+
 		if d.IsDir() {
 			name := d.Name()
 			if _, ok := ignoreDirs[name]; ok {
@@ -57,11 +74,6 @@ func BuildTree(opts Options) (Node, error) {
 			return nil
 		}
 
-		relOS, err := filepath.Rel(rootAbs, p)
-		if err != nil {
-			return nil
-		}
-		rel := filepath.ToSlash(relOS)
 		dirRel := path.Dir(rel)
 		if dirRel == "." {
 			dirRel = ""
