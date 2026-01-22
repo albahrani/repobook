@@ -9,8 +9,10 @@ import (
 	"strings"
 	"sync"
 
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	ast "github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -67,6 +69,12 @@ func New(opts Options) (*Renderer, error) {
 	r.md = goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM,
+			highlighting.NewHighlighting(
+				highlighting.WithStyle("github"),
+				highlighting.WithFormatOptions(
+					chromahtml.WithClasses(true),
+				),
+			),
 		),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
@@ -83,7 +91,7 @@ func New(opts Options) (*Renderer, error) {
 
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("id").OnElements("h1", "h2", "h3", "h4", "h5", "h6")
-	p.AllowAttrs("class").OnElements("pre", "code", "span")
+	p.AllowAttrs("class").OnElements("div", "pre", "code", "span")
 	p.AllowAttrs("href").OnElements("a")
 	p.AllowAttrs("src", "alt", "title").OnElements("img")
 	p.AllowAttrs("rel", "target").OnElements("a")
