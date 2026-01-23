@@ -65,17 +65,27 @@
 			)
 		}
 
+		const hasReadme = !!(node.children || []).find((c) => {
+			return c && c.type === 'file' && typeof c.name === 'string' && c.name.toLowerCase() === 'readme.md'
+		})
+
 		const active = isPathInDir(currentPath, node.path) ? ' is-active' : ''
 		const shouldOpen = !navCollapsed || !node.path || active || openDirPaths.has(node.path)
 		const openAttr = shouldOpen ? ' open' : ''
 		const dirId = 'dir-' + btoa(unescape(encodeURIComponent(node.path || 'root'))).replace(/=+$/g, '')
 		const children = (node.children || []).map(renderTreeNode).join('')
 		const dirPath = node.path || ''
+		const readmeAttr = hasReadme ? '1' : '0'
+		const readmeClass = hasReadme ? '' : ' no-readme'
+		const titleAttr = hasReadme ? '' : ' title="No README.md in this folder"'
+		const label = hasReadme
+			? `<a class="nav-dir-link" href="/file/${encodeURI(dirPath)}">${esc(node.name || 'root')}</a>`
+			: `<span class="nav-dir-link is-disabled" aria-disabled="true"${titleAttr}>${esc(node.name || 'root')}</span>`
 		return (
-			`<details class="nav-dir${active}" id="${dirId}" data-path="${esc(node.path || '')}"${openAttr}>` +
+			`<details class="nav-dir${active}${readmeClass}" id="${dirId}" data-path="${esc(node.path || '')}" data-has-readme="${readmeAttr}"${openAttr}>` +
 				`<summary class="nav-dir-title">` +
 					`<button class="nav-dir-toggle" type="button" aria-label="Toggle folder"></button>` +
-					`<a class="nav-dir-link" href="/file/${encodeURI(dirPath)}">${esc(node.name || 'root')}</a>` +
+					label +
 				`</summary>` +
 				`<div class="nav-dir-children">${children}</div>` +
 			`</details>`
@@ -102,6 +112,9 @@
 					d.open = !d.open
 					return
 				}
+				const link = e.target && e.target.closest ? e.target.closest('.nav-dir-link') : null
+				if (!link) return
+				if (d.getAttribute('data-has-readme') !== '1') return
 				const p = d.getAttribute('data-path') || ''
 				navigate(`/file/${encodeURI(p)}`, false)
 			})

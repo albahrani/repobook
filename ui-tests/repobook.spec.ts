@@ -49,6 +49,19 @@ test('clicking folder name navigates to its README', async ({ page }) => {
   await expect(page.locator('#crumb')).toContainText('docs/README.md')
 })
 
+test('folders without README are not clickable', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('#crumb')).toContainText('README.md')
+
+  // No README.md in misc/, so the label is a span (not a link).
+  await expect(page.locator('#nav details.nav-dir[data-path="misc"] summary a.nav-dir-link')).toHaveCount(0)
+  const label = page.locator('#nav details.nav-dir[data-path="misc"] summary .nav-dir-link')
+  await expect(label).toBeVisible()
+
+  await label.click()
+  await expect(page.locator('#crumb')).toContainText('README.md')
+})
+
 test('markdown links are clickable and route internally', async ({ page }) => {
   await page.goto('/')
   await page.locator('#viewer').getByRole('link', { name: 'Guide', exact: true }).click()

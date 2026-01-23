@@ -182,6 +182,12 @@ body {
 .nav-dir.is-active > summary {
   background: rgba(46, 160, 67, 0.10);
 }
+.nav-dir.no-readme > summary {
+  opacity: 0.65;
+}
+.nav-dir.no-readme > summary:hover {
+  opacity: 0.75;
+}
 .nav-dir-toggle {
   flex: 0 0 auto;
   width: 18px;
@@ -216,6 +222,9 @@ details[open] > summary .nav-dir-toggle::before { transform: rotate(90deg); }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.nav-dir-link.is-disabled {
+  cursor: default;
 }
 .nav-dir-children { padding-left: 8px; }
 
