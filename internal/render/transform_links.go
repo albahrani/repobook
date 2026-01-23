@@ -40,6 +40,12 @@ func (t *linkRewriter) Transform(node *ast.Document, reader text.Reader, pc pars
 				v.SetAttributeString("target", []byte("_blank"))
 				v.SetAttributeString("rel", []byte("noopener noreferrer"))
 			}
+		case *ast.AutoLink:
+			_, openNewTab := t.rewriteURLDest(curDir, v.URL(reader.Source()))
+			if openNewTab {
+				v.SetAttributeString("target", []byte("_blank"))
+				v.SetAttributeString("rel", []byte("noopener noreferrer"))
+			}
 		case *ast.Image:
 			dest, _ := t.rewriteURLDest(curDir, v.Destination)
 			v.Destination = dest

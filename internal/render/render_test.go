@@ -21,7 +21,7 @@ func TestRenderer_RenderFile_TOC_Links_Sanitization(t *testing.T) {
 		}
 	}
 
-	mustWrite("a.md", "# Title\n\nSee [Docs](docs) and [Note](docs/note.md#h).\n\nDownload [PDF](files/report.pdf).\n\nVisit [Example](https://example.com/x).\n\nEmail [Mail](mailto:test@example.com) and call [Call](tel:+15551212).\n\n<script>alert(1)</script>\n\n![Logo](img/logo.svg)\n")
+	mustWrite("a.md", "# Title\n\nSee [Docs](docs) and [Note](docs/note.md#h).\n\nDownload [PDF](files/report.pdf).\n\nVisit [Example](https://example.com/x).\n\nAuto: https://kubernetes.io/docs/reference/kubectl/\n\nEmail [Mail](mailto:test@example.com) and call [Call](tel:+15551212).\n\n<script>alert(1)</script>\n\n![Logo](img/logo.svg)\n")
 	mustWrite("docs/README.md", "# Docs\n\nGo to [Note](note.md).\n")
 	mustWrite("docs/note.md", "# Note\n\n## H\n\n```go\npackage main\n\nfunc main() {}\n```\n")
 	mustWrite("img/logo.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><text x=\"0\" y=\"10\">x</text></svg>")
@@ -64,6 +64,9 @@ func TestRenderer_RenderFile_TOC_Links_Sanitization(t *testing.T) {
 	}
 	if ok, err := regexp.MatchString(`<a[^>]*href="https://example\.com/x"[^>]*(target="_blank"[^>]*rel="noopener noreferrer"|rel="noopener noreferrer"[^>]*target="_blank")`, res.HTML); err != nil || !ok {
 		t.Fatalf("expected external HTTP(S) link to open in new tab")
+	}
+	if ok, err := regexp.MatchString(`<a[^>]*href="https://kubernetes\.io/docs/reference/kubectl/"[^>]*(target="_blank"[^>]*rel="noopener noreferrer"|rel="noopener noreferrer"[^>]*target="_blank")`, res.HTML); err != nil || !ok {
+		t.Fatalf("expected autolink external HTTP(S) URL to open in new tab")
 	}
 	if ok, err := regexp.MatchString(`<a[^>]*href="mailto:test@example\.com"[^>]*(target="_blank"[^>]*rel="noopener noreferrer"|rel="noopener noreferrer"[^>]*target="_blank")`, res.HTML); err != nil || !ok {
 		t.Fatalf("expected mailto link to open in new tab")
