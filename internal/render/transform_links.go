@@ -36,7 +36,7 @@ func (t *linkRewriter) Transform(node *ast.Document, reader text.Reader, pc pars
 			dest, openNewTab := t.rewriteURLDest(curDir, v.Destination)
 			v.Destination = dest
 			if openNewTab {
-				// For non-markdown repo assets, open in a new tab.
+				// For repo assets and external HTTP(S) links, open in a new tab.
 				v.SetAttributeString("target", []byte("_blank"))
 				v.SetAttributeString("rel", []byte("noopener"))
 			}
@@ -61,7 +61,15 @@ func (t *linkRewriter) rewriteURLDest(curDir string, dest []byte) ([]byte, bool)
 	if err != nil {
 		return dest, false
 	}
-	if u.Scheme != "" || u.Host != "" {
+	if u.Host != "" {
+		// Scheme-relative links like //example.com.
+		return dest, true
+	}
+	if u.Scheme != "" {
+		// Only treat HTTP(S) as a browser-navigation link.
+		if u.Scheme == "http" || u.Scheme == "https" {
+			return dest, true
+		}
 		return dest, false
 	}
 

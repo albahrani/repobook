@@ -3,6 +3,7 @@ package render
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -20,7 +21,7 @@ func TestRenderer_RenderFile_TOC_Links_Sanitization(t *testing.T) {
 		}
 	}
 
-	mustWrite("a.md", "# Title\n\nSee [Docs](docs) and [Note](docs/note.md#h).\n\nDownload [PDF](files/report.pdf).\n\n<script>alert(1)</script>\n\n![Logo](img/logo.svg)\n")
+	mustWrite("a.md", "# Title\n\nSee [Docs](docs) and [Note](docs/note.md#h).\n\nDownload [PDF](files/report.pdf).\n\nVisit [Example](https://example.com/x).\n\n<script>alert(1)</script>\n\n![Logo](img/logo.svg)\n")
 	mustWrite("docs/README.md", "# Docs\n\nGo to [Note](note.md).\n")
 	mustWrite("docs/note.md", "# Note\n\n## H\n\n```go\npackage main\n\nfunc main() {}\n```\n")
 	mustWrite("img/logo.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><text x=\"0\" y=\"10\">x</text></svg>")
@@ -58,8 +59,11 @@ func TestRenderer_RenderFile_TOC_Links_Sanitization(t *testing.T) {
 	if !strings.Contains(res.HTML, "href=\"/repo/files/report.pdf\"") {
 		t.Fatalf("expected non-markdown link to route to /repo/files/report.pdf")
 	}
-	if !strings.Contains(res.HTML, "target=\"_blank\"") {
+	if ok, err := regexp.MatchString(`<a[^>]*href="/repo/files/report\.pdf"[^>]*target="_blank"`, res.HTML); err != nil || !ok {
 		t.Fatalf("expected non-markdown link to open in new tab")
+	}
+	if ok, err := regexp.MatchString(`<a[^>]*href="https://example\.com/x"[^>]*target="_blank"`, res.HTML); err != nil || !ok {
+		t.Fatalf("expected external HTTP(S) link to open in new tab")
 	}
 }
 
