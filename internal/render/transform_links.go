@@ -33,34 +33,41 @@ func (t *linkRewriter) Transform(node *ast.Document, reader text.Reader, pc pars
 
 		switch v := n.(type) {
 		case *ast.Link:
-			v.Destination = t.rewriteURLDest(curDir, v.Destination)
+			dest, openNewTab := t.rewriteURLDest(curDir, v.Destination)
+			v.Destination = dest
+			if openNewTab {
+				// For non-markdown repo assets, open in a new tab.
+				v.SetAttributeString("target", []byte("_blank"))
+				v.SetAttributeString("rel", []byte("noopener"))
+			}
 		case *ast.Image:
-			v.Destination = t.rewriteURLDest(curDir, v.Destination)
+			dest, _ := t.rewriteURLDest(curDir, v.Destination)
+			v.Destination = dest
 		}
 		return ast.WalkContinue, nil
 	})
 }
 
-func (t *linkRewriter) rewriteURLDest(curDir string, dest []byte) []byte {
+func (t *linkRewriter) rewriteURLDest(curDir string, dest []byte) ([]byte, bool) {
 	raw := strings.TrimSpace(string(dest))
 	if raw == "" {
-		return dest
+		return dest, false
 	}
 	if strings.HasPrefix(raw, "#") {
-		return dest
+		return dest, false
 	}
 
 	u, err := url.Parse(raw)
 	if err != nil {
-		return dest
+		return dest, false
 	}
 	if u.Scheme != "" || u.Host != "" {
-		return dest
+		return dest, false
 	}
 
 	p := u.Path
 	if p == "" {
-		return dest
+		return dest, false
 	}
 
 	// Resolve relative to current file dir.
@@ -70,12 +77,12 @@ func (t *linkRewriter) rewriteURLDest(curDir string, dest []byte) []byte {
 	// If it looks like (or is) a markdown doc/folder, route internally.
 	if t.shouldRouteToMarkdown(resolved) {
 		u.Path = "/file/" + resolved
-		return []byte(u.String())
+		return []byte(u.String()), false
 	}
 
 	// Otherwise treat as repo asset.
 	u.Path = "/repo/" + resolved
-	return []byte(u.String())
+	return []byte(u.String()), true
 }
 
 func (t *linkRewriter) shouldRouteToMarkdown(rel string) bool {
