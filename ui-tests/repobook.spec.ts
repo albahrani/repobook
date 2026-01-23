@@ -14,6 +14,14 @@ test('navigation updates document and TOC', async ({ page }) => {
   await expect(page.locator('#toc')).toContainText('Part 1')
 })
 
+test('navigation highlights current file', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('link', { name: 'guide.md' }).click()
+  const link = page.locator('#nav a.nav-link[href="/file/docs/guide.md"]')
+  await expect(link).toBeVisible()
+  await expect(link.locator('..')).toHaveClass(/is-active/)
+})
+
 test('markdown links are clickable and route internally', async ({ page }) => {
   await page.goto('/')
   await page.locator('#viewer').getByRole('link', { name: 'Guide', exact: true }).click()

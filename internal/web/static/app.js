@@ -15,6 +15,11 @@
 	let searchTimer = null
 	let lastQuery = ''
 
+	function isPathInDir(filePath, dirPath) {
+		if (!dirPath) return true
+		return filePath === dirPath || filePath.startsWith(dirPath + '/')
+	}
+
   function setStatus(msg) {
     elStatus.textContent = msg || ''
   }
@@ -42,30 +47,36 @@
     return res.json()
   }
 
-  function renderTreeNode(node) {
-    if (node.type === 'file') {
-      const active = node.path === currentPath ? ' is-active' : ''
-      return (
-        `<div class="nav-item file${active}">` +
-			  `<a class="nav-link" href="/file/${encodeURI(node.path)}">${esc(node.name)}</a>` +
-        `</div>`
-      )
-    }
+	function renderTreeNode(node) {
+		if (node.type === 'file') {
+			const active = node.path === currentPath ? ' is-active' : ''
+			return (
+				`<div class="nav-item file${active}">` +
+					`<a class="nav-link" href="/file/${encodeURI(node.path)}">${esc(node.name)}</a>` +
+				`</div>`
+			)
+		}
 
-    const dirId = 'dir-' + btoa(unescape(encodeURIComponent(node.path || 'root'))).replace(/=+$/g, '')
-    const children = (node.children || []).map(renderTreeNode).join('')
-    return (
-      `<details class="nav-dir" id="${dirId}" open>` +
-        `<summary class="nav-dir-title">${esc(node.name || 'root')}</summary>` +
-        `<div class="nav-dir-children">${children}</div>` +
-      `</details>`
-    )
-  }
+		const active = isPathInDir(currentPath, node.path) ? ' is-active' : ''
+		const dirId = 'dir-' + btoa(unescape(encodeURIComponent(node.path || 'root'))).replace(/=+$/g, '')
+		const children = (node.children || []).map(renderTreeNode).join('')
+		return (
+			`<details class="nav-dir${active}" id="${dirId}" open>` +
+				`<summary class="nav-dir-title">${esc(node.name || 'root')}</summary>` +
+				`<div class="nav-dir-children">${children}</div>` +
+			`</details>`
+		)
+	}
 
-  function renderTree() {
-    if (!tree) return
-    elNav.innerHTML = renderTreeNode(tree)
-  }
+	function renderTree() {
+		if (!tree) return
+		elNav.innerHTML = renderTreeNode(tree)
+		// Ensure the active entry is visible.
+		setTimeout(() => {
+			const active = elNav.querySelector('.nav-item.is-active .nav-link')
+			if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' })
+		}, 0)
+	}
 
 	function setSearchMeta(msg) {
 		if (!elSearchMeta) return
