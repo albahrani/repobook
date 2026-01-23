@@ -70,6 +70,10 @@ func (t *linkRewriter) rewriteURLDest(curDir string, dest []byte) ([]byte, bool)
 		if u.Scheme == "http" || u.Scheme == "https" {
 			return dest, true
 		}
+		// Common external navigations/handlers.
+		if u.Scheme == "mailto" || u.Scheme == "tel" {
+			return dest, true
+		}
 		return dest, false
 	}
 

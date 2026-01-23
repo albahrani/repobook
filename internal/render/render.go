@@ -96,7 +96,7 @@ func New(opts Options) (*Renderer, error) {
 	p.AllowAttrs("src", "alt", "title").OnElements("img")
 	p.AllowAttrs("rel", "target").OnElements("a")
 	// Allow internal links (we still sanitize schemes).
-	p.AllowURLSchemes("http", "https", "mailto")
+	p.AllowURLSchemes("http", "https", "mailto", "tel")
 	r.policy = p
 
 	return r, nil
