@@ -23,6 +23,14 @@ test('markdown links are clickable and route internally', async ({ page }) => {
   await expect(page.locator('#viewer')).toContainText('Alpha appears here')
 })
 
+test('external autolinks open in new tab', async ({ page }) => {
+  await page.goto('/')
+  const a = page.locator('#viewer a[href="https://kubernetes.io/docs/reference/kubectl/"]')
+  await expect(a).toHaveCount(1)
+  await expect(a).toHaveAttribute('target', '_blank')
+  await expect(a).toHaveAttribute('rel', /noopener/)
+})
+
 test('search finds results and clicking opens file', async ({ page }) => {
   await page.goto('/')
 
