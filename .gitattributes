@@ -1,5 +1,9 @@
 * text=auto
 
+# Ensure git control files stay LF too.
+/.gitattributes text eol=lf
+/.gitignore text eol=lf
+
 # Keep LF endings for source files (avoid CRLF churn on Windows).
 *.go text eol=lf
 *.md text eol=lf
