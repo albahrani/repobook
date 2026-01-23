@@ -39,8 +39,14 @@ body {
   min-width: 0;
 }
 
+/* Sidebar layout: avoid hard-coded height calculations. */
+.pane.nav {
+  display: flex;
+  flex-direction: column;
+}
+
 .pane-title {
-  padding: 12px 14px;
+  padding: 10px 14px;
   font-weight: 650;
   letter-spacing: 0.2px;
   color: var(--muted);
@@ -48,14 +54,40 @@ body {
   background: linear-gradient(180deg, rgba(246,248,250,0.85), rgba(255,255,255,0.60));
 }
 
+.nav-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nav-toggle {
+  flex: 0 0 auto;
+  font: inherit;
+  color: var(--muted);
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(27, 31, 36, 0.12);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.nav-toggle:hover {
+  background: rgba(9, 105, 218, 0.06);
+  border-color: rgba(9, 105, 218, 0.18);
+  color: var(--text);
+}
+
 .nav-tree {
-  padding: 10px 10px 14px;
+  padding: 6px 8px 8px;
   overflow: auto;
-  height: calc(100% - 46px - 74px);
+  flex: 1 1 auto;
+  font-size: 12px;
+  line-height: 1.15;
 }
 
 .nav-search {
-  padding: 10px 10px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(246,248,250,0.70), rgba(255,255,255,0.55));
 }
@@ -64,7 +96,7 @@ body {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 9px 10px;
+  padding: 7px 10px;
   font: inherit;
   outline: none;
   background: rgba(255,255,255,0.92);
@@ -76,16 +108,16 @@ body {
 }
 
 .search-meta {
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--muted);
   font-size: 12px;
   min-height: 16px;
 }
 
 .search-results {
-  padding: 10px 10px 14px;
+  padding: 8px 10px 10px;
   overflow: auto;
-  height: calc(100% - 46px - 74px);
+  flex: 1 1 auto;
 }
 
 .result {
@@ -133,24 +165,24 @@ body {
   white-space: nowrap;
 }
 
-.nav-dir { margin: 6px 0; }
+.nav-dir { margin: 2px 0; }
 .nav-dir > summary {
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 10px;
+  padding: 3px 8px;
+  border-radius: 8px;
   color: var(--text);
 }
 .nav-dir > summary:hover { background: var(--panel-2); }
 .nav-dir.is-active > summary {
   background: rgba(46, 160, 67, 0.10);
 }
-.nav-dir-children { padding-left: 10px; }
+.nav-dir-children { padding-left: 8px; }
 
-.nav-item { margin: 2px 0; }
+.nav-item { margin: 0; }
 .nav-link {
   display: block;
-  padding: 6px 8px;
-  border-radius: 10px;
+  padding: 2px 8px;
+  border-radius: 8px;
   color: var(--muted);
   text-decoration: none;
   overflow: hidden;

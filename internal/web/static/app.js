@@ -7,6 +7,7 @@
 	const elSearch = document.getElementById('search')
 	const elResults = document.getElementById('results')
 	const elSearchMeta = document.getElementById('searchMeta')
+	const elNavToggle = document.getElementById('navToggle')
 
 	let tree = null
 	let currentPath = ''
@@ -14,6 +15,13 @@
 	let scrollSpyDisconnect = null
 	let searchTimer = null
 	let lastQuery = ''
+	const openDirPaths = new Set()
+	let navCollapsed = false
+
+	function syncNavToggle() {
+		if (!elNavToggle) return
+		elNavToggle.textContent = navCollapsed ? 'Expand' : 'Collapse'
+	}
 
 	function isPathInDir(filePath, dirPath) {
 		if (!dirPath) return true
@@ -58,10 +66,12 @@
 		}
 
 		const active = isPathInDir(currentPath, node.path) ? ' is-active' : ''
+		const shouldOpen = !navCollapsed || !node.path || active || openDirPaths.has(node.path)
+		const openAttr = shouldOpen ? ' open' : ''
 		const dirId = 'dir-' + btoa(unescape(encodeURIComponent(node.path || 'root'))).replace(/=+$/g, '')
 		const children = (node.children || []).map(renderTreeNode).join('')
 		return (
-			`<details class="nav-dir${active}" id="${dirId}" open>` +
+			`<details class="nav-dir${active}" id="${dirId}" data-path="${esc(node.path || '')}"${openAttr}>` +
 				`<summary class="nav-dir-title">${esc(node.name || 'root')}</summary>` +
 				`<div class="nav-dir-children">${children}</div>` +
 			`</details>`
@@ -71,11 +81,43 @@
 	function renderTree() {
 		if (!tree) return
 		elNav.innerHTML = renderTreeNode(tree)
+
+		// Persist manual open/close.
+		elNav.querySelectorAll('details.nav-dir').forEach((d) => {
+			d.addEventListener('toggle', () => {
+				const p = d.getAttribute('data-path') || ''
+				if (!p) return
+				if (d.open) openDirPaths.add(p)
+				else openDirPaths.delete(p)
+			})
+		})
+
 		// Ensure the active entry is visible.
 		setTimeout(() => {
 			const active = elNav.querySelector('.nav-item.is-active .nav-link')
 			if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' })
 		}, 0)
+	}
+
+	function setupNavToggle() {
+		if (!elNavToggle) return
+		try {
+			navCollapsed = localStorage.getItem('repobook.navCollapsed') === '1'
+		} catch (_) {
+			navCollapsed = false
+		}
+		syncNavToggle()
+		elNavToggle.addEventListener('click', () => {
+			navCollapsed = !navCollapsed
+			if (navCollapsed) openDirPaths.clear()
+			try {
+				localStorage.setItem('repobook.navCollapsed', navCollapsed ? '1' : '0')
+			} catch (_) {
+				// ignore
+			}
+			syncNavToggle()
+			renderTree()
+		})
 	}
 
 	function setSearchMeta(msg) {
@@ -345,6 +387,7 @@
 	async function boot() {
 		setupLinkInterception()
 		setupTOCBehavior()
+		setupNavToggle()
 		setupSearch()
 		await loadTree()
 		await route()

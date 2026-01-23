@@ -22,6 +22,23 @@ test('navigation highlights current file', async ({ page }) => {
   await expect(link.locator('..')).toHaveClass(/is-active/)
 })
 
+test('collapse button hides directories', async ({ page }) => {
+  await page.goto('/')
+  const btn = page.locator('#navToggle')
+  await expect(btn).toBeVisible()
+  await expect(btn).toHaveText('Collapse')
+
+  const guide = page.locator('#nav a.nav-link[href="/file/docs/guide.md"]')
+  await expect(guide).toBeVisible()
+
+  await btn.click()
+  await expect(btn).toHaveText('Expand')
+  await expect(guide).toBeHidden()
+
+  await page.locator('#nav summary.nav-dir-title', { hasText: 'docs' }).click()
+  await expect(guide).toBeVisible()
+})
+
 test('markdown links are clickable and route internally', async ({ page }) => {
   await page.goto('/')
   await page.locator('#viewer').getByRole('link', { name: 'Guide', exact: true }).click()
