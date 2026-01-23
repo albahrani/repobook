@@ -70,9 +70,13 @@
 		const openAttr = shouldOpen ? ' open' : ''
 		const dirId = 'dir-' + btoa(unescape(encodeURIComponent(node.path || 'root'))).replace(/=+$/g, '')
 		const children = (node.children || []).map(renderTreeNode).join('')
+		const dirPath = node.path || ''
 		return (
 			`<details class="nav-dir${active}" id="${dirId}" data-path="${esc(node.path || '')}"${openAttr}>` +
-				`<summary class="nav-dir-title">${esc(node.name || 'root')}</summary>` +
+				`<summary class="nav-dir-title">` +
+					`<button class="nav-dir-toggle" type="button" aria-label="Toggle folder"></button>` +
+					`<a class="nav-dir-link" href="/file/${encodeURI(dirPath)}">${esc(node.name || 'root')}</a>` +
+				`</summary>` +
 				`<div class="nav-dir-children">${children}</div>` +
 			`</details>`
 		)
@@ -81,6 +85,27 @@
 	function renderTree() {
 		if (!tree) return
 		elNav.innerHTML = renderTreeNode(tree)
+
+		// Folder title behavior:
+		// - clicking the text navigates to the folder README.md (server resolves folder -> README.md)
+		// - expanding/collapsing only happens via the arrow button
+		elNav.querySelectorAll('details.nav-dir').forEach((d) => {
+			const summary = d.querySelector('summary.nav-dir-title')
+			if (!summary) return
+			summary.addEventListener('click', (e) => {
+				// Prevent the native <details>/<summary> toggle.
+				e.preventDefault()
+				e.stopPropagation()
+
+				const toggleBtn = e.target && e.target.closest ? e.target.closest('button.nav-dir-toggle') : null
+				if (toggleBtn) {
+					d.open = !d.open
+					return
+				}
+				const p = d.getAttribute('data-path') || ''
+				navigate(`/file/${encodeURI(p)}`, false)
+			})
+		})
 
 		// Persist manual open/close.
 		elNav.querySelectorAll('details.nav-dir').forEach((d) => {

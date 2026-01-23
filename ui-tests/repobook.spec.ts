@@ -35,8 +35,18 @@ test('collapse button hides directories', async ({ page }) => {
   await expect(btn).toHaveText('Expand')
   await expect(guide).toBeHidden()
 
-  await page.locator('#nav summary.nav-dir-title', { hasText: 'docs' }).click()
+  // Expand should only happen via arrow button.
+  await page.locator('#nav details.nav-dir[data-path="docs"] summary .nav-dir-toggle').click()
   await expect(guide).toBeVisible()
+})
+
+test('clicking folder name navigates to its README', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('#crumb')).toContainText('README.md')
+
+  // Clicking on the folder text should navigate to /file/docs (server resolves it to docs/README.md).
+  await page.locator('#nav details.nav-dir[data-path="docs"] summary .nav-dir-link').click()
+  await expect(page.locator('#crumb')).toContainText('docs/README.md')
 })
 
 test('markdown links are clickable and route internally', async ({ page }) => {
