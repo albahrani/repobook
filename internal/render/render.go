@@ -90,6 +90,12 @@ func New(opts Options) (*Renderer, error) {
 	)
 
 	p := bluemonday.UGCPolicy()
+	// The default UGCPolicy mutates link rel values (e.g. forcing nofollow/noreferrer).
+	// We manage rel/target ourselves during markdown link rewriting.
+	p.RequireNoFollowOnLinks(false)
+	p.RequireNoFollowOnFullyQualifiedLinks(false)
+	p.RequireNoReferrerOnLinks(false)
+	p.RequireNoReferrerOnFullyQualifiedLinks(false)
 	p.AllowAttrs("id").OnElements("h1", "h2", "h3", "h4", "h5", "h6")
 	p.AllowAttrs("class").OnElements("div", "pre", "code", "span")
 	p.AllowAttrs("href").OnElements("a")

@@ -59,16 +59,16 @@ func TestRenderer_RenderFile_TOC_Links_Sanitization(t *testing.T) {
 	if !strings.Contains(res.HTML, "href=\"/repo/files/report.pdf\"") {
 		t.Fatalf("expected non-markdown link to route to /repo/files/report.pdf")
 	}
-	if ok, err := regexp.MatchString(`<a[^>]*href="/repo/files/report\.pdf"[^>]*target="_blank"`, res.HTML); err != nil || !ok {
+	if ok, err := regexp.MatchString(`<a[^>]*href="/repo/files/report\.pdf"[^>]*(target="_blank"[^>]*rel="noopener noreferrer"|rel="noopener noreferrer"[^>]*target="_blank")`, res.HTML); err != nil || !ok {
 		t.Fatalf("expected non-markdown link to open in new tab")
 	}
-	if ok, err := regexp.MatchString(`<a[^>]*href="https://example\.com/x"[^>]*target="_blank"`, res.HTML); err != nil || !ok {
+	if ok, err := regexp.MatchString(`<a[^>]*href="https://example\.com/x"[^>]*(target="_blank"[^>]*rel="noopener noreferrer"|rel="noopener noreferrer"[^>]*target="_blank")`, res.HTML); err != nil || !ok {
 		t.Fatalf("expected external HTTP(S) link to open in new tab")
 	}
-	if ok, err := regexp.MatchString(`<a[^>]*href="mailto:test@example\.com"[^>]*target="_blank"`, res.HTML); err != nil || !ok {
+	if ok, err := regexp.MatchString(`<a[^>]*href="mailto:test@example\.com"[^>]*(target="_blank"[^>]*rel="noopener noreferrer"|rel="noopener noreferrer"[^>]*target="_blank")`, res.HTML); err != nil || !ok {
 		t.Fatalf("expected mailto link to open in new tab")
 	}
-	if ok, err := regexp.MatchString(`<a[^>]*href="tel:\+15551212"[^>]*target="_blank"`, res.HTML); err != nil || !ok {
+	if ok, err := regexp.MatchString(`<a[^>]*href="tel:\+15551212"[^>]*(target="_blank"[^>]*rel="noopener noreferrer"|rel="noopener noreferrer"[^>]*target="_blank")`, res.HTML); err != nil || !ok {
 		t.Fatalf("expected tel link to open in new tab")
 	}
 }

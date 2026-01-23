@@ -38,7 +38,7 @@ func (t *linkRewriter) Transform(node *ast.Document, reader text.Reader, pc pars
 			if openNewTab {
 				// For repo assets and external HTTP(S) links, open in a new tab.
 				v.SetAttributeString("target", []byte("_blank"))
-				v.SetAttributeString("rel", []byte("noopener"))
+				v.SetAttributeString("rel", []byte("noopener noreferrer"))
 			}
 		case *ast.Image:
 			dest, _ := t.rewriteURLDest(curDir, v.Destination)
