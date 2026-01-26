@@ -79,14 +79,15 @@ func New(opts Options) (*Renderer, error) {
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 			parser.WithASTTransformers(
-				gmutil.Prioritized(&linkRewriter{repoRootAbs: r.rootAbs}, 100),
-			),
-		),
-		goldmark.WithRendererOptions(
-			html.WithHardWraps(),
-			html.WithXHTML(),
-			html.WithUnsafe(), // sanitization is applied afterwards
-		),
+                gmutil.Prioritized(&diagramTransformer{}, 90),
+                gmutil.Prioritized(&linkRewriter{repoRootAbs: r.rootAbs}, 100),
+            ),
+        ),
+        goldmark.WithRendererOptions(
+            html.WithHardWraps(),
+            html.WithXHTML(),
+            html.WithUnsafe(), // sanitization is applied afterwards
+            ),
 	)
 
 	p := bluemonday.UGCPolicy()

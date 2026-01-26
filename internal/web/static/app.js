@@ -422,15 +422,40 @@
     renderTree()
   }
 
-	async function boot() {
-		setupLinkInterception()
-		setupTOCBehavior()
-		setupNavToggle()
-		setupSearch()
-		await loadTree()
-		await route()
-		setupLiveUpdates()
-	}
+  async function boot() {
+    setupLinkInterception()
+    setupTOCBehavior()
+    setupNavToggle()
+    setupSearch()
+    // Load mermaid runtime lazily. Prefer a vendored local copy embedded into
+    // the app (served under /app/vendor/mermaid.min.js) so offline/CI runs can
+    // work without network access. Fall back to CDN if a local file is missing.
+    if (typeof window.mermaid === 'undefined') {
+      const tryLocal = async () => {
+        try {
+          return await loadScriptOnce('/app/vendor/mermaid.min.js', () => typeof window.mermaid !== 'undefined')
+        } catch (_) {
+          return false
+        }
+      }
+      const okLocal = await tryLocal()
+      if (!okLocal) {
+        // Fallback CDN (unpkg pinned version). This is convenient during
+        // development but CI/air-gapped environments should vendor the file.
+        try {
+          await loadScriptOnce('https://unpkg.com/mermaid@10.4.0/dist/mermaid.min.js', () => typeof window.mermaid !== 'undefined')
+        } catch (_) {
+          // Non-fatal: pages will still show the mermaid source block.
+        }
+      }
+      if (window.mermaid && window.mermaid.initialize) {
+        window.mermaid.initialize({ startOnLoad: false })
+      }
+    }
+    await loadTree()
+    await route()
+    setupLiveUpdates()
+  }
 
   boot().catch((err) => {
     setStatus('')
