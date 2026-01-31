@@ -2,6 +2,14 @@
 
 [![CI](https://github.com/albahrani/repobook/actions/workflows/ci.yml/badge.svg)](https://github.com/albahrani/repobook/actions/workflows/ci.yml)
 
+Links:
+
+- Issues: https://github.com/albahrani/repobook/issues
+- Contributing: `CONTRIBUTING.md`
+- Security: `SECURITY.md`
+- License: `LICENSE`
+- Third-party notices: `THIRD_PARTY_NOTICES.md`
+
 repobook is a small local web app that turns a folder (typically a Git repo) into a fast, navigable Markdown "book":
 
 - File tree navigation + breadcrumbs
