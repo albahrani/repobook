@@ -4,8 +4,15 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  go:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,11 +22,35 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
           cache: true
+
+      - name: gofmt
+        run: |
+          test -z "$(gofmt -l $(git ls-files '*.go'))"
+
+      - name: go vet
+        run: go vet ./...
 
       - name: Go tests
         run: go test ./...
+
+      - name: Go build
+        run: go build ./cmd/repobook
+
+  ui:
+    runs-on: ubuntu-latest
+    needs: go
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -33,8 +64,23 @@ jobs:
       - name: Install ripgrep (optional search backend)
         run: sudo apt-get update && sudo apt-get install -y ripgrep
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
       - name: UI tests
         run: npm run test:ui
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
