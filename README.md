@@ -1,5 +1,7 @@
 # repobook
 
+[![CI](https://github.com/albahrani/repobook/actions/workflows/ci.yml/badge.svg)](https://github.com/albahrani/repobook/actions/workflows/ci.yml)
+
 repobook is a small local web app that turns a folder (typically a Git repo) into a fast, navigable Markdown "book":
 
 - File tree navigation + breadcrumbs
