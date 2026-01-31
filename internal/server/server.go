@@ -1,12 +1,16 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"repobook/internal/ignore"
 	"repobook/internal/render"
@@ -19,6 +23,14 @@ import (
 
 type Options struct {
 	Root string
+
+	// RepoAssetHost/RepoAssetPort control the separate server that serves raw
+	// repo files (images, PDFs, etc). This keeps untrusted repo content on a
+	// different origin than the app UI and its API.
+	//
+	// If RepoAssetPort is 0, an available port is chosen.
+	RepoAssetHost string
+	RepoAssetPort int
 }
 
 type Server struct {
@@ -27,12 +39,20 @@ type Server struct {
 	renderer *render.Renderer
 	hub      *watch.Hub
 	watcher  *watch.Watcher
+
+	repoAssetBaseURL string
+	repoAssetSrv     *http.Server
+	repoAssetLn      net.Listener
 }
 
 func New(opts Options) (*Server, error) {
 	rootAbs, err := filepath.Abs(opts.Root)
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.RepoAssetHost == "" {
+		opts.RepoAssetHost = "127.0.0.1"
 	}
 
 	ig, err := ignore.Load(rootAbs)
@@ -60,6 +80,14 @@ func New(opts Options) (*Server, error) {
 		watcher:  w,
 	}
 
+	// Serve repo assets from a different origin than the app UI.
+	// This prevents raw HTML/JS inside the repo from becoming same-origin with
+	// the repobook UI + API.
+	if err := s.startRepoAssetServer(opts.RepoAssetHost, opts.RepoAssetPort); err != nil {
+		_ = w.Close()
+		return nil, err
+	}
+
 	return s, nil
 }
 
@@ -67,7 +95,19 @@ func (s *Server) Close() error {
 	if s.watcher != nil {
 		_ = s.watcher.Close()
 	}
+	if s.repoAssetSrv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = s.repoAssetSrv.Shutdown(ctx)
+	}
+	if s.repoAssetLn != nil {
+		_ = s.repoAssetLn.Close()
+	}
 	return nil
+}
+
+func (s *Server) RepoAssetBaseURL() string {
+	return s.repoAssetBaseURL
 }
 
 func (s *Server) Handler() http.Handler {
@@ -77,7 +117,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(web.FS())))
 
 	// Repo assets (served from the target directory, read-only)
-	mux.HandleFunc("/repo/", s.handleRepoAsset)
+	// Note: this handler redirects to a separate repo-asset server running on a
+	// different origin.
+	mux.HandleFunc("/repo/", s.handleRepoAssetRedirect)
 
 	// API
 	mux.HandleFunc("/api/tree", s.handleTree)
@@ -93,6 +135,35 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/", s.handleIndex)
 
 	return mux
+}
+
+func (s *Server) startRepoAssetServer(host string, port int) error {
+	addr := fmt.Sprintf("%s:%d", host, port)
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	s.repoAssetLn = ln
+	base := fmt.Sprintf("http://%s/", ln.Addr().String())
+	s.repoAssetBaseURL = base
+
+	assetMux := http.NewServeMux()
+	assetMux.HandleFunc("/", s.handleRepoAssetDirect)
+
+	srv := &http.Server{
+		Handler:      assetMux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	s.repoAssetSrv = srv
+
+	go func() {
+		_ = srv.Serve(ln)
+	}()
+
+	return nil
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -174,7 +245,7 @@ func (s *Server) handleRender(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, res)
 }
 
-func (s *Server) handleRepoAsset(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleRepoAssetRedirect(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -185,6 +256,37 @@ func (s *Server) handleRepoAsset(w http.ResponseWriter, r *http.Request) {
 	relURL, _ = url.PathUnescape(relURL)
 	relURL = path.Clean("/" + relURL)
 	relURL = strings.TrimPrefix(relURL, "/")
+	if relURL == "." {
+		relURL = ""
+	}
+
+	if s.repoAssetLn == nil || s.repoAssetBaseURL == "" {
+		http.Error(w, "repo asset server not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	u, _ := url.Parse(s.repoAssetBaseURL)
+	u.Path = "/" + relURL
+	u.RawQuery = r.URL.RawQuery
+	// Permanent redirect is safe since the chosen port is stable for the process.
+	http.Redirect(w, r, u.String(), http.StatusPermanentRedirect)
+}
+
+func (s *Server) handleRepoAssetDirect(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// URL paths are always forward slashes.
+	// On the asset server we serve files from the repo root at "/".
+	relURL := strings.TrimPrefix(r.URL.Path, "/")
+	relURL, _ = url.PathUnescape(relURL)
+	relURL = path.Clean("/" + relURL)
+	relURL = strings.TrimPrefix(relURL, "/")
+	if relURL == "." {
+		relURL = ""
+	}
 
 	abs, _, err := util.ResolveRepoPath(s.rootAbs, relURL)
 	if err != nil {
@@ -204,6 +306,8 @@ func (s *Server) handleRepoAsset(w http.ResponseWriter, r *http.Request) {
 
 	// Light caching; live reload will refresh content anyway.
 	w.Header().Set("Cache-Control", "no-cache")
+	// Defensive defaults.
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	http.ServeFile(w, r, abs)
 }
 

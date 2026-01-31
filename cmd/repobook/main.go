@@ -75,6 +75,9 @@ func main() {
 
 	fmt.Printf("repobook: serving %s\n", root)
 	fmt.Printf("repobook: open %s\n", url)
+	if assets := s.RepoAssetBaseURL(); assets != "" {
+		fmt.Printf("repobook: repo assets %s\n", assets)
+	}
 	if !*noOpen {
 		_ = browser.OpenURL(url)
 	}
