@@ -4,11 +4,11 @@
 
 Links:
 
-- Issues: https://github.com/albahrani/repobook/issues
-- Contributing: `CONTRIBUTING.md`
-- Security: `SECURITY.md`
-- License: `LICENSE`
-- Third-party notices: `THIRD_PARTY_NOTICES.md`
+- [Issues](https://github.com/albahrani/repobook/issues)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
+- [License](LICENSE)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 repobook is a small local web app that turns a folder (typically a Git repo) into a fast, navigable Markdown "book":
 
@@ -46,14 +46,14 @@ go run ./cmd/repobook --host 127.0.0.1 --port 32123 --no-open /path/to/repo
 
 Mermaid diagrams are supported by writing fenced code blocks with the `mermaid` language:
 
-```markdown
+````markdown
 ```mermaid
 flowchart TD
   A[Start] --> B{Choice}
   B -->|Yes| C[Do thing]
   B -->|No| D[Do other thing]
 ```
-```
+````
 
 repobook converts these blocks into `<div class="mermaid">...</div>` and loads the Mermaid runtime in the browser.
 
