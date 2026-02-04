@@ -1,50 +1,62 @@
-# repobook
+![repobook](docs/assets/wordmark.png)
 
 [![CI](https://github.com/albahrani/repobook/actions/workflows/ci.yml/badge.svg)](https://github.com/albahrani/repobook/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/albahrani/repobook?display_name=tag&sort=semver)](https://github.com/albahrani/repobook/releases)
+[![License](https://img.shields.io/github/license/albahrani/repobook)](LICENSE)
 
-Links:
+Turn any folder (typically a Git repository) into a fast, navigable Markdown "book" on `localhost`.
 
-- [Issues](https://github.com/albahrani/repobook/issues)
-- [Contributing](CONTRIBUTING.md)
-- [Security](SECURITY.md)
-- [License](LICENSE)
-- [Third-party notices](THIRD_PARTY_NOTICES.md)
+[Features](#features) • [Install](#install) • [Usage](#usage) • [Mermaid](#mermaid-diagrams) • [Security](#security) • [Contributing](#development--contributing)
 
-repobook is a small local web app that turns a folder (typically a Git repo) into a fast, navigable Markdown "book":
+![repobook screenshot](docs/assets/screenshot.png)
 
-- File tree navigation + breadcrumbs
-- Table of contents for the current document
-- GitHub-flavored-ish Markdown rendering
-- Syntax highlighting for fenced code blocks
-- Optional full-text search via ripgrep (`rg`)
-- Mermaid diagrams (```mermaid fences)
+## Features
 
-It runs a local HTTP server and serves a single-page frontend from embedded static assets.
+- File tree navigation, breadcrumbs, and per-document table-of-contents
+- GitHub-flavored-ish Markdown rendering with syntax highlighting
+- Optional full-text search powered by ripgrep (`rg`)
+- Mermaid diagram blocks via fenced code blocks with language `mermaid`
+- Safe-by-default when browsing untrusted repos (sanitized HTML + separate-origin assets)
+- Single binary with embedded assets (no frontend build step)
 
-## Quick Start
+## Install
 
-Requirements:
+Releases first (recommended)
 
-- Go (see `go.mod` for the current version)
-- Optional: ripgrep (`rg`) for search
+1) Download the archive for your platform from:
+   https://github.com/albahrani/repobook/releases
+2) Extract it and run `repobook` (or `repobook.exe` on Windows).
 
-Run from source:
+Build from source (Go required)
 
 ```bash
-go run ./cmd/repobook --no-open /path/to/repo
+go build ./cmd/repobook
 ```
 
-By default it binds to `127.0.0.1` and chooses an available port.
+Optional: install ripgrep for search
+
+- Debian/Ubuntu: `sudo apt install ripgrep`
+- macOS (Homebrew): `brew install ripgrep`
+
+## Usage
+
+Serve a folder/repo:
+
+```bash
+repobook --no-open /path/to/repo
+```
 
 Common options:
 
 ```bash
-go run ./cmd/repobook --host 127.0.0.1 --port 32123 --no-open /path/to/repo
+repobook --host 127.0.0.1 --port 32123 --no-open /path/to/repo
 ```
 
-## Mermaid Diagrams
+By default repobook binds to `127.0.0.1` and chooses an available port.
 
-Mermaid diagrams are supported by writing fenced code blocks with the `mermaid` language:
+## Mermaid diagrams
+
+Write fenced code blocks with the `mermaid` language:
 
 ````markdown
 ```mermaid
@@ -55,12 +67,11 @@ flowchart TD
 ```
 ````
 
-repobook converts these blocks into `<div class="mermaid">...</div>` and loads the Mermaid runtime in the browser.
+repobook converts these blocks into `<div class="mermaid">...</div>` and loads the Mermaid runtime in the browser (vendored fallback to CDN).
 
-- Preferred: vendored Mermaid at `internal/web/static/vendor/mermaid.min.js` (works offline / in CI)
-- Fallback: CDN (unpkg) if the vendored file is missing
+## Development & Contributing
 
-## Development
+See `CONTRIBUTING.md` for contribution guidelines.
 
 Run Go tests:
 
@@ -76,8 +87,24 @@ npx playwright install --with-deps
 npm run test:ui
 ```
 
+Formatting / vet:
+
+```bash
+gofmt -l $(git ls-files '*.go')
+go vet ./...
+```
+
+## Security
+
+- Repo assets are served from a separate origin to avoid same-origin issues.
+- Markdown is sanitized after rendering.
+
+## Links
+
+- [Issues](https://github.com/albahrani/repobook/issues)
+- [Security](SECURITY.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
+
 ## License
 
 MIT. See `LICENSE`.
-
-Third-party notices: `THIRD_PARTY_NOTICES.md`.
