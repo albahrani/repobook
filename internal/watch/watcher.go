@@ -27,6 +27,10 @@ func NewWatcher(rootAbs string, hub *Hub, ig *ignore.Matcher) (*Watcher, error) 
 
 	ww := &Watcher{rootAbs: rootAbs, ignore: ig, hub: hub, w: w, done: make(chan struct{})}
 
+	// Start the event loop before adding watches to prevent deadlock on Windows
+	// where fsnotify may send events synchronously during Add()
+	go ww.loop()
+
 	// Watch all directories initially (fsnotify is not recursive).
 	err = filepath.WalkDir(rootAbs, func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -59,7 +63,6 @@ func NewWatcher(rootAbs string, hub *Hub, ig *ignore.Matcher) (*Watcher, error) 
 		return nil, err
 	}
 
-	go ww.loop()
 	return ww, nil
 }
 
