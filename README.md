@@ -14,7 +14,7 @@ Turn any folder (typically a Git repository) into a fast, navigable Markdown "bo
 
 - File tree navigation, breadcrumbs, and per-document table-of-contents
 - GitHub-flavored-ish Markdown rendering with syntax highlighting
-- Optional full-text search powered by ripgrep (`rg`)
+- Search works out of the box (ripgrep is optional for speed)
 - Mermaid diagram blocks via fenced code blocks with language `mermaid`
 - Safe-by-default when browsing untrusted repos (sanitized HTML + separate-origin assets)
 - Single binary with embedded assets (no frontend build step)
@@ -37,6 +37,8 @@ Optional: install ripgrep for search
 
 - Debian/Ubuntu: `sudo apt install ripgrep`
 - macOS (Homebrew): `brew install ripgrep`
+
+Without ripgrep, repobook falls back to a built-in Markdown search.
 
 ## Usage
 

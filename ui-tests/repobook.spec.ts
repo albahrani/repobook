@@ -82,10 +82,6 @@ test('external autolinks open in new tab', async ({ page }) => {
 test('search finds results and clicking opens file', async ({ page }) => {
   await page.goto('/')
 
-	// Search backend is optional; skip if rg is missing on this machine.
-	const probe = await page.request.get('/api/search?q=Alpha')
-	test.skip(probe.status() === 501, 'ripgrep (rg) not installed')
-
   await page.locator('#search').fill('Alpha')
   await expect(page.locator('#results')).toBeVisible()
   await expect(page.locator('#results')).toContainText('docs/note.md')

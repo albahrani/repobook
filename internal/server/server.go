@@ -321,11 +321,14 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	res, err := search.Ripgrep(s.rootAbs, q, 200)
 	if err != nil {
 		if err == search.ErrRipgrepNotFound {
-			http.Error(w, "ripgrep (rg) not found on PATH", http.StatusNotImplemented)
+			// Fall back to a built-in search for environments where rg isn't
+			// available (common on Windows).
+			res, err = search.Fallback(s.rootAbs, s.ignore, q, 200)
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 
 	writeJSON(w, res)
