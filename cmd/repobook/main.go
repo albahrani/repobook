@@ -30,12 +30,25 @@ func main() {
 	noOpen := flag.Bool("no-open", false, "Do not open the browser automatically")
 	flag.Parse()
 
-	if flag.NArg() != 1 {
+	if flag.NArg() < 1 {
 		flag.Usage()
 		os.Exit(2)
 	}
 
-	root, err := filepath.Abs(flag.Arg(0))
+	// Join all remaining arguments to handle paths with spaces
+	// This allows: repobook C:\path with spaces\file.txt
+	// as well as: repobook "C:\path with spaces\file.txt"
+	pathArg := flag.Arg(0)
+	if flag.NArg() > 1 {
+		// Join all arguments with spaces
+		args := make([]string, flag.NArg())
+		for i := 0; i < flag.NArg(); i++ {
+			args[i] = flag.Arg(i)
+		}
+		pathArg = filepath.Join(args...)
+	}
+
+	root, err := filepath.Abs(pathArg)
 	if err != nil {
 		fatal(err)
 	}

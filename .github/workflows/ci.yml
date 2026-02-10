@@ -86,3 +86,26 @@ jobs:
           path: |
             playwright-report/
             test-results/
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Build Windows binary
+        run: go build -o repobook.exe ./cmd/repobook
+
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: repobook-windows-amd64
+          path: repobook.exe
+          retention-days: 7
