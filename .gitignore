@@ -9,6 +9,7 @@
 # build output
 dist/
 build/
+repobook
 
 # editor
 .vscode/
