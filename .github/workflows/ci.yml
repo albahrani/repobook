@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  go:
+  verify:
     runs-on: ubuntu-latest
 
     steps:
@@ -40,9 +40,22 @@ jobs:
       - name: Go build
         run: go build ./cmd/repobook
 
-  ui:
-    runs-on: ubuntu-latest
-    needs: go
+  build:
+    runs-on: ${{ matrix.os }}
+    needs: verify
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            artifact_name: repobook
+            upload_name: repobook-linux-amd64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            artifact_name: repobook.exe
+            upload_name: repobook-windows-amd64
 
     steps:
       - name: Checkout
@@ -53,6 +66,32 @@ jobs:
         with:
           go-version: stable
           cache: true
+
+      - name: Build binary
+        run: go build -o ${{ matrix.artifact_name }} ./cmd/repobook
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.upload_name }}
+          path: ${{ matrix.artifact_name }}
+          retention-days: 7
+
+  ui:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: repobook-linux-amd64
+
+      - name: Make binary executable
+        run: chmod +x repobook
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -86,26 +125,3 @@ jobs:
           path: |
             playwright-report/
             test-results/
-
-  build-windows:
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: true
-
-      - name: Build Windows binary
-        run: go build -o repobook.exe ./cmd/repobook
-
-      - name: Upload Windows binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: repobook-windows-amd64
-          path: repobook.exe
-          retention-days: 7
