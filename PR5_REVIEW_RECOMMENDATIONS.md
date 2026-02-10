@@ -9,7 +9,7 @@ PR #5 from @globetrotter contains important Windows bug fixes but also includes 
 ### 1. Code Changes (Essential Bug Fixes)
 
 **File: `internal/watch/watcher.go`**
-- **Change**: Moved `go ww.loop()` to start before `filepath.WalkDir()`
+- **Change**: Moved `go ww.loop()` to start before filepath.WalkDir
 - **Why**: Fixes critical Windows deadlock when running on large directory trees
 - **Impact**: Application would crash with "fatal error: all goroutines are asleep - deadlock!" on Windows
 - **Platform compatibility**: Safe for all platforms (Windows, Linux, macOS)
