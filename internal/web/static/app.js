@@ -55,6 +55,36 @@
     return res.json()
   }
 
+  // Load a script once and optionally verify it's available via `verifyFn`.
+  // Returns true if the script is loaded and verifyFn (if provided) returns truthy.
+  async function loadScriptOnce(src, verifyFn) {
+    // If already present, wait briefly for it to initialize.
+    if (document.querySelector('script[data-src="' + src + '"]')) {
+      if (typeof verifyFn !== 'function') return true
+      for (let i = 0; i < 50; i++) {
+        if (verifyFn()) return true
+        await new Promise((r) => setTimeout(r, 100))
+      }
+      return !!verifyFn()
+    }
+
+    return new Promise((resolve) => {
+      const s = document.createElement('script')
+      s.async = true
+      s.setAttribute('data-src', src)
+      s.src = src
+      s.onload = () => {
+        try {
+          resolve(typeof verifyFn === 'function' ? !!verifyFn() : true)
+        } catch (e) {
+          resolve(false)
+        }
+      }
+      s.onerror = () => resolve(false)
+      document.head.appendChild(s)
+    })
+  }
+
 	function renderTreeNode(node) {
 		if (node.type === 'file') {
 			const active = node.path === currentPath ? ' is-active' : ''
@@ -246,9 +276,9 @@
 			const el = document.getElementById(id)
 			if (el) el.scrollIntoView({ block: 'start' })
 		})
-	}
+  }
 
-	function setupScrollSpy() {
+  function setupScrollSpy() {
 		if (scrollSpyDisconnect) {
 			scrollSpyDisconnect()
 			scrollSpyDisconnect = null
@@ -305,6 +335,30 @@
     elCrumb.textContent = p
   }
 
+  // Render any inserted Mermaid blocks if the runtime is available.
+  function renderMermaidElements() {
+    try {
+      const els = elViewer.querySelectorAll('.mermaid')
+      if (!els || !els.length) return
+      if (window.mermaid) {
+        if (typeof window.mermaid.init === 'function') {
+          window.mermaid.init(undefined, els)
+          return
+        }
+        if (typeof window.mermaid.contentLoaded === 'function') {
+          window.mermaid.contentLoaded()
+          return
+        }
+        if (typeof window.mermaid.run === 'function') {
+          window.mermaid.run()
+          return
+        }
+      }
+    } catch (e) {
+      console.warn('mermaid render failed', e)
+    }
+  }
+
 	async function loadDoc(relPath, opts) {
     const anchor = (opts && opts.anchor) || ''
     setStatus('Loading…')
@@ -313,8 +367,15 @@
     currentMTime = data.mtime || 0
     document.title = `repobook • ${data.title || data.path}`
     setCrumb(data.path)
+
     elViewer.innerHTML = `<article class="markdown-body">${data.html}</article>`
-		renderTOC(data.toc || [])
+
+    // Render Mermaid diagrams if the runtime is available. This supports
+    // different mermaid API variants across versions and is tolerant to
+    // failures (non-fatal).
+    renderMermaidElements()
+
+    renderTOC(data.toc || [])
 		renderTree()
 		setupScrollSpy()
 		setStatus('')

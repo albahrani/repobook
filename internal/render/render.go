@@ -16,6 +16,7 @@ import (
 	ast "github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 	gmutil "github.com/yuin/goldmark/util"
@@ -87,6 +88,9 @@ func New(opts Options) (*Renderer, error) {
 			html.WithHardWraps(),
 			html.WithXHTML(),
 			html.WithUnsafe(), // sanitization is applied afterwards
+			renderer.WithNodeRenderers(
+				gmutil.Prioritized(&diagramHTMLRenderer{}, 100),
+			),
 		),
 	)
 
