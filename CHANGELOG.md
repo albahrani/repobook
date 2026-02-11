@@ -19,6 +19,19 @@ The format is based on Keep a Changelog (https://keepachangelog.com/en/1.1.0/).
 - Test coverage: new Playwright UI test `ui-tests/mermaid.spec.ts` verifies the mermaid block renders to an SVG and there are no console/network errors; added to the existing UI suite.
 - Test data: sample mermaid diagram added to `testdata/repo/docs/guide.md` to exercise rendering end-to-end.
 
+## [0.1.1] - 2026-02-10
+
+Small release with dependency bumps, CI improvements, and several fixes.
+
+### Fixed
+
+- **Windows deadlock & path handling**: backported fixes to avoid a deadlock on Windows and improve handling of paths with spaces (see PR #5).
+
+### Changed
+
+- CI/workflows: updated Playwright config to support prebuilt binaries and improved release workflow; removed bundled binary from the repository and updated `.gitignore` / docs.
+- Dependencies: bumped `golang.org/x/net`, `github.com/alecthomas/chroma`, and the Playwright test dependency.
+
 ## [0.1.0] - 2026-01-31
 
 Initial open-source release.
