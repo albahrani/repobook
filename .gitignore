@@ -19,3 +19,9 @@ repobook
 node_modules/
 playwright-report/
 test-results/
+
+# Local test artifacts created during debugging
+repobook.log
+repobook.pid
+render.json
+mermaid.js
