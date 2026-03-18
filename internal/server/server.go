@@ -66,7 +66,7 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 
-	r, err := render.New(render.Options{RepoRootAbs: rootAbs})
+	r, err := render.New(render.Options{RepoRootAbs: rootAbs, Ignore: ig})
 	if err != nil {
 		_ = w.Close()
 		return nil, err

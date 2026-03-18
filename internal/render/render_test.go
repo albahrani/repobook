@@ -21,7 +21,7 @@ func TestRenderer_RenderFile_TOC_Links_Sanitization(t *testing.T) {
 		}
 	}
 
-	mustWrite("a.md", "# Title\n\nSee [Docs](docs) and [Note](docs/note.md#h).\n\nDownload [PDF](files/report.pdf).\n\nVisit [Example](https://example.com/x).\n\nAuto: https://kubernetes.io/docs/reference/kubectl/\n\nEmail [Mail](mailto:test@example.com) and call [Call](tel:+15551212).\n\n<script>alert(1)</script>\n\n![Logo](img/logo.svg)\n")
+	mustWrite("a.md", "# Title\n\nSee [Docs](docs) and [Note](docs/note.md#h).\n\nMissing [Doc](missing.md).\n\nDownload [PDF](files/report.pdf).\n\nMissing [PDF](files/missing.pdf).\n\nVisit [Example](https://example.com/x).\n\nAuto: https://kubernetes.io/docs/reference/kubectl/\n\nEmail [Mail](mailto:test@example.com) and call [Call](tel:+15551212).\n\n<script>alert(1)</script>\n\n![Logo](img/logo.svg)\n\n![MissingImg](img/missing.svg)\n")
 	mustWrite("docs/README.md", "# Docs\n\nGo to [Note](note.md).\n")
 	mustWrite("docs/note.md", "# Note\n\n## H\n\n```go\npackage main\n\nfunc main() {}\n```\n")
 	mustWrite("img/logo.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><text x=\"0\" y=\"10\">x</text></svg>")
@@ -58,6 +58,27 @@ func TestRenderer_RenderFile_TOC_Links_Sanitization(t *testing.T) {
 	}
 	if !strings.Contains(res.HTML, "href=\"/repo/files/report.pdf\"") {
 		t.Fatalf("expected non-markdown link to route to /repo/files/report.pdf")
+	}
+	if strings.Contains(res.HTML, "href=\"/repo/files/report.pdf\" data-repobook-missing=\"1\"") {
+		t.Fatalf("expected existing asset link to not be marked missing")
+	}
+	if !strings.Contains(res.HTML, "href=\"/file/missing.md\"") {
+		t.Fatalf("expected missing markdown link to still route to /file/missing.md")
+	}
+	if !strings.Contains(res.HTML, "href=\"/file/missing.md\"") || !strings.Contains(res.HTML, "data-repobook-missing=\"1\"") {
+		t.Fatalf("expected missing markdown link to be marked as missing")
+	}
+	if !strings.Contains(res.HTML, "href=\"/repo/files/missing.pdf\"") {
+		t.Fatalf("expected missing non-markdown link to route to /repo/files/missing.pdf")
+	}
+	if !strings.Contains(res.HTML, "href=\"/repo/files/missing.pdf\"") || !strings.Contains(res.HTML, "data-repobook-missing=\"1\"") {
+		t.Fatalf("expected missing non-markdown link to be marked as missing")
+	}
+	if !strings.Contains(res.HTML, "src=\"/repo/img/missing.svg\"") {
+		t.Fatalf("expected missing image to route to /repo/img/missing.svg")
+	}
+	if !strings.Contains(res.HTML, "data-repobook-missing=\"1\"") {
+		t.Fatalf("expected missing image to be marked with data-repobook-missing=1")
 	}
 	if ok, err := regexp.MatchString(`<a[^>]*href="/repo/files/report\.pdf"[^>]*(target="_blank"[^>]*rel="noopener noreferrer"|rel="noopener noreferrer"[^>]*target="_blank")`, res.HTML); err != nil || !ok {
 		t.Fatalf("expected non-markdown link to open in new tab")

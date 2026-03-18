@@ -21,11 +21,13 @@ import (
 	"github.com/yuin/goldmark/text"
 	gmutil "github.com/yuin/goldmark/util"
 
+	"repobook/internal/ignore"
 	"repobook/internal/util"
 )
 
 type Options struct {
 	RepoRootAbs string
+	Ignore      *ignore.Matcher
 }
 
 type TOCItem struct {
@@ -44,6 +46,7 @@ type RenderResult struct {
 
 type Renderer struct {
 	rootAbs string
+	ignore  *ignore.Matcher
 	md      goldmark.Markdown
 	policy  *bluemonday.Policy
 
@@ -63,6 +66,7 @@ func New(opts Options) (*Renderer, error) {
 
 	r := &Renderer{
 		rootAbs: opts.RepoRootAbs,
+		ignore:  opts.Ignore,
 		cache:   make(map[string]cached),
 	}
 
@@ -81,7 +85,7 @@ func New(opts Options) (*Renderer, error) {
 			parser.WithAutoHeadingID(),
 			parser.WithASTTransformers(
 				gmutil.Prioritized(&diagramTransformer{}, 90),
-				gmutil.Prioritized(&linkRewriter{repoRootAbs: r.rootAbs}, 100),
+				gmutil.Prioritized(&linkRewriter{repoRootAbs: r.rootAbs, ignore: r.ignore}, 100),
 			),
 		),
 		goldmark.WithRendererOptions(
@@ -103,8 +107,9 @@ func New(opts Options) (*Renderer, error) {
 	p.RequireNoReferrerOnFullyQualifiedLinks(false)
 	p.AllowAttrs("id").OnElements("h1", "h2", "h3", "h4", "h5", "h6")
 	p.AllowAttrs("class").OnElements("div", "pre", "code", "span")
-	p.AllowAttrs("href").OnElements("a")
+	p.AllowAttrs("href", "title", "class", "data-repobook-missing").OnElements("a")
 	p.AllowAttrs("src", "alt", "title").OnElements("img")
+	p.AllowAttrs("data-repobook-missing").OnElements("img")
 	p.AllowAttrs("rel", "target").OnElements("a")
 	// Allow internal links (we still sanitize schemes).
 	p.AllowURLSchemes("http", "https", "mailto", "tel")
