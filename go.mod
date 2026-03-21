@@ -9,7 +9,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
-	github.com/yuin/goldmark v1.7.16
+	github.com/yuin/goldmark v1.7.17
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
 )
 
