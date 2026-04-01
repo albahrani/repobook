@@ -16,6 +16,7 @@
 	let searchTimer = null
 	let lastQuery = ''
 	const openDirPaths = new Set()
+	const closedDirPaths = new Set()
 	let navCollapsed = false
 
 	function syncNavToggle() {
@@ -100,7 +101,7 @@
 		})
 
 		const active = isPathInDir(currentPath, node.path) ? ' is-active' : ''
-		const shouldOpen = !navCollapsed || !node.path || active || openDirPaths.has(node.path)
+		const shouldOpen = !closedDirPaths.has(node.path) && (!navCollapsed || !node.path || active || openDirPaths.has(node.path))
 		const openAttr = shouldOpen ? ' open' : ''
 		const dirId = 'dir-' + btoa(unescape(encodeURIComponent(node.path || 'root'))).replace(/=+$/g, '')
 		const children = (node.children || []).map(renderTreeNode).join('')
@@ -155,8 +156,13 @@
 			d.addEventListener('toggle', () => {
 				const p = d.getAttribute('data-path') || ''
 				if (!p) return
-				if (d.open) openDirPaths.add(p)
-				else openDirPaths.delete(p)
+				if (d.open) {
+					openDirPaths.add(p)
+					closedDirPaths.delete(p)
+				} else {
+					openDirPaths.delete(p)
+					closedDirPaths.add(p)
+				}
 			})
 		})
 
@@ -178,6 +184,7 @@
 		elNavToggle.addEventListener('click', () => {
 			navCollapsed = !navCollapsed
 			if (navCollapsed) openDirPaths.clear()
+			else closedDirPaths.clear()
 			try {
 				localStorage.setItem('repobook.navCollapsed', navCollapsed ? '1' : '0')
 			} catch (_) {
