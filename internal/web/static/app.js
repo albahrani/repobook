@@ -8,6 +8,7 @@
 	const elResults = document.getElementById('results')
 	const elSearchMeta = document.getElementById('searchMeta')
 	const elNavToggle = document.getElementById('navToggle')
+	const elThemeToggle = document.getElementById('themeToggle')
 
 	let tree = null
 	let currentPath = ''
@@ -15,13 +16,194 @@
 	let scrollSpyDisconnect = null
 	let searchTimer = null
 	let lastQuery = ''
+	let currentSearchQuery = ''
+	let currentHighlightIdx = -1
 	const openDirPaths = new Set()
 	const closedDirPaths = new Set()
 	let navCollapsed = false
+	let elHighlightNav = null
+	let elHighlightCount = null
 
 	function syncNavToggle() {
 		if (!elNavToggle) return
 		elNavToggle.textContent = navCollapsed ? 'Expand' : 'Collapse'
+	}
+
+	function setupThemeToggle() {
+		if (!elThemeToggle) return
+		let theme = 'light'
+		try {
+			theme = localStorage.getItem('repobook.theme') || 'light'
+		} catch (_) {}
+		applyTheme(theme)
+		elThemeToggle.addEventListener('click', () => {
+			const next = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+			applyTheme(next)
+			try {
+				localStorage.setItem('repobook.theme', next)
+			} catch (_) {}
+		})
+	}
+
+	function applyTheme(theme) {
+		if (theme === 'dark') {
+			document.body.setAttribute('data-theme', 'dark')
+			elThemeToggle.textContent = '\u2600'
+			elThemeToggle.setAttribute('aria-label', 'Switch to light mode')
+		} else {
+			document.body.removeAttribute('data-theme')
+			elThemeToggle.textContent = '\u263E'
+			elThemeToggle.setAttribute('aria-label', 'Switch to dark mode')
+		}
+	}
+
+	function addCopyButtons() {
+		elViewer.querySelectorAll('pre').forEach((pre) => {
+			if (pre.querySelector('.copy-code-btn')) return
+			const wrapper = document.createElement('div')
+			wrapper.className = 'code-block-wrapper'
+			pre.parentNode.insertBefore(wrapper, pre)
+			wrapper.appendChild(pre)
+			const btn = document.createElement('button')
+			btn.className = 'copy-code-btn'
+			btn.textContent = 'Copy'
+			btn.addEventListener('click', () => {
+				const code = pre.querySelector('code')
+				const text = code ? code.textContent : pre.textContent
+				navigator.clipboard.writeText(text).then(() => {
+					btn.textContent = 'Copied!'
+					btn.classList.add('copied')
+					setTimeout(() => {
+						btn.textContent = 'Copy'
+						btn.classList.remove('copied')
+					}, 2000)
+				})
+			})
+			wrapper.appendChild(btn)
+		})
+	}
+
+	function highlightSearchTerms(query) {
+		clearHighlights()
+		if (!query) return
+		currentSearchQuery = query
+		const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
+		if (!terms.length) return
+
+		let count = 0
+		const walker = document.createTreeWalker(elViewer, NodeFilter.SHOW_TEXT, {
+			acceptNode(node) {
+				if (!node.parentElement) return NodeFilter.FILTER_REJECT
+				const tag = node.parentElement.tagName
+				if (tag === 'SCRIPT' || tag === 'STYLE') return NodeFilter.FILTER_REJECT
+				if (node.parentElement.classList.contains('search-highlight')) return NodeFilter.FILTER_REJECT
+				return NodeFilter.FILTER_ACCEPT
+			}
+		})
+		const textNodes = []
+		while (walker.nextNode()) textNodes.push(walker.currentNode)
+		for (const textNode of textNodes) {
+			const text = textNode.textContent
+			const lower = text.toLowerCase()
+			const fragments = []
+			for (const term of terms) {
+				let idx = lower.indexOf(term)
+				while (idx !== -1) {
+					fragments.push({ start: idx, end: idx + term.length })
+					idx = lower.indexOf(term, idx + term.length)
+				}
+			}
+			if (!fragments.length) continue
+			fragments.sort((a, b) => a.start - b.start)
+			const merged = [fragments[0]]
+			for (let i = 1; i < fragments.length; i++) {
+				const last = merged[merged.length - 1]
+				if (fragments[i].start <= last.end) {
+					last.end = Math.max(last.end, fragments[i].end)
+				} else {
+					merged.push(fragments[i])
+				}
+			}
+			const span = document.createElement('span')
+			let pos = 0
+			for (const frag of merged) {
+				if (frag.start > pos) {
+					span.appendChild(document.createTextNode(text.slice(pos, frag.start)))
+				}
+				const mark = document.createElement('mark')
+				mark.className = 'search-highlight'
+				mark.setAttribute('data-highlight-idx', count++)
+				mark.textContent = text.slice(frag.start, frag.end)
+				span.appendChild(mark)
+				pos = frag.end
+			}
+			if (pos < text.length) {
+				span.appendChild(document.createTextNode(text.slice(pos)))
+			}
+			textNode.parentNode.replaceChild(span, textNode)
+		}
+		currentHighlightIdx = -1
+		updateHighlightNav()
+	}
+
+	function getHighlightCount() {
+		return elViewer.querySelectorAll('mark.search-highlight').length
+	}
+
+	function jumpToHighlight(idx) {
+		const marks = elViewer.querySelectorAll('mark.search-highlight')
+		if (!marks.length) return
+		// Wrap around
+		if (idx < 0) idx = marks.length - 1
+		if (idx >= marks.length) idx = 0
+		currentHighlightIdx = idx
+		// Remove current class from all, add to target
+		marks.forEach(m => m.classList.remove('current'))
+		const target = marks[idx]
+		target.classList.add('current')
+		target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+		updateHighlightNav()
+	}
+
+	function jumpToNextHighlight() {
+		jumpToHighlight(currentHighlightIdx + 1)
+	}
+
+	function jumpToPrevHighlight() {
+		jumpToHighlight(currentHighlightIdx - 1)
+	}
+
+	function updateHighlightNav() {
+		const count = getHighlightCount()
+		if (!elHighlightNav) return
+		if (count === 0 || !currentSearchQuery) {
+			elHighlightNav.hidden = true
+			return
+		}
+		elHighlightNav.hidden = false
+		elHighlightCount.textContent = `${currentHighlightIdx + 1} of ${count}`
+	}
+
+	function clearHighlights() {
+		currentSearchQuery = ''
+		currentHighlightIdx = -1
+		elViewer.querySelectorAll('mark.search-highlight').forEach((mark) => {
+			const parent = mark.parentNode
+			parent.replaceChild(document.createTextNode(mark.textContent), mark)
+		})
+		// Remove wrapper spans that only contain text
+		elViewer.querySelectorAll('span').forEach((span) => {
+			if (!span.className && span.childNodes.length > 0) {
+				let allText = true
+				for (const child of span.childNodes) {
+					if (child.nodeType !== 3) { allText = false; break }
+				}
+				if (allText) {
+					span.parentNode.replaceChild(document.createTextNode(span.textContent), span)
+				}
+			}
+		})
+		updateHighlightNav()
 	}
 
 	function isPathInDir(filePath, dirPath) {
@@ -237,9 +419,11 @@
 	async function runSearch(q) {
 		q = (q || '').trim()
 		lastQuery = q
+		currentSearchQuery = q
 		if (!q) {
 			setSearchMeta('')
 			showResults(false)
+			clearHighlights()
 			return
 		}
 		setSearchMeta('Searching…')
@@ -249,6 +433,7 @@
 			if (lastQuery !== q) return
 			renderResults(data)
 			setSearchMeta(`${data.results.length}${data.truncated ? '+' : ''} results`)
+			highlightSearchTerms(q)
 		} catch (err) {
 			if (lastQuery !== q) return
 			if (elResults) {
@@ -368,14 +553,18 @@
 
 	async function loadDoc(relPath, opts) {
     const anchor = (opts && opts.anchor) || ''
+    const fromSearch = opts && opts.fromSearch
     setStatus('Loading…')
     const data = await fetchJSON(`/api/render?path=${encodeURIComponent(relPath)}`)
     currentPath = data.path
     currentMTime = data.mtime || 0
-    document.title = `repobook • ${data.title || data.path}`
+    document.title = `repobook \u2022 ${data.title || data.path}`
     setCrumb(data.path)
 
     elViewer.innerHTML = `<article class="markdown-body">${data.html}</article>`
+
+    // Add copy buttons to code blocks
+    addCopyButtons()
 
     // Render Mermaid diagrams if the runtime is available. This supports
     // different mermaid API variants across versions and is tolerant to
@@ -386,6 +575,16 @@
 		renderTree()
 		setupScrollSpy()
 		setStatus('')
+
+    // Apply search highlights if navigating from search results
+    if (fromSearch && currentSearchQuery) {
+      highlightSearchTerms(currentSearchQuery)
+      // Jump to first highlight
+      if (getHighlightCount() > 0) {
+        jumpToHighlight(0)
+      }
+      // Do NOT close the results list - user may want to visit other matches
+    }
 
     const target = anchor || location.hash
     if (target && target.startsWith('#')) {
@@ -408,22 +607,22 @@
     navigate(`/file/${encodeURIComponent(home.path)}`, true)
   }
 
-  function navigate(urlPath, replace) {
+  function navigate(urlPath, replace, fromSearch) {
     if (replace) {
       history.replaceState({}, '', urlPath)
     } else {
       history.pushState({}, '', urlPath)
     }
-    route()
+    route(fromSearch)
   }
 
-  async function route() {
+  async function route(fromSearch) {
     const p = getRoutePath()
     if (!p) {
       await ensureHome()
       return
     }
-    await loadDoc(p)
+    await loadDoc(p, { fromSearch: fromSearch })
   }
 
 	function setupLinkInterception() {
@@ -439,11 +638,9 @@
         const u = new URL(href, location.origin)
         if (u.origin === location.origin && u.pathname.startsWith('/file/')) {
           e.preventDefault()
-				if (elSearch && elSearch.value) {
-					elSearch.value = ''
-					runSearch('')
-				}
-          navigate(u.pathname + u.hash, false)
+          // If clicking from search results, keep query for highlighting
+          const fromSearch = elResults && !elResults.hidden && currentSearchQuery
+          navigate(u.pathname + u.hash, false, fromSearch)
 	}
       } catch (_) {
         // ignore
@@ -451,18 +648,50 @@
     })
 
     window.addEventListener('popstate', () => {
+      clearHighlights()
+      if (elSearch) elSearch.value = ''
+      currentSearchQuery = ''
       route()
     })
   }
 
 	function setupSearch() {
 		if (!elSearch) return
+
+		// Wrap input in a container for positioning the clear button
+		const inputWrap = document.createElement('div')
+		inputWrap.className = 'search-input-wrap'
+		elSearch.parentNode.insertBefore(inputWrap, elSearch)
+		inputWrap.appendChild(elSearch)
+
+		// Clear button
+		const clearBtn = document.createElement('button')
+		clearBtn.type = 'button'
+		clearBtn.className = 'search-clear'
+		clearBtn.innerHTML = '&times;'
+		clearBtn.setAttribute('aria-label', 'Clear search')
+		clearBtn.hidden = true
+		inputWrap.appendChild(clearBtn)
+
+		function syncClearBtn() {
+			clearBtn.hidden = !elSearch.value
+		}
+
 		elSearch.addEventListener('input', () => {
+			syncClearBtn()
 			const q = elSearch.value
 			if (searchTimer) clearTimeout(searchTimer)
 			searchTimer = setTimeout(() => {
 				runSearch(q)
 			}, 200)
+		})
+
+		clearBtn.addEventListener('click', () => {
+			elSearch.value = ''
+			syncClearBtn()
+			runSearch('')
+			clearHighlights()
+			elSearch.focus()
 		})
 	}
 
@@ -495,6 +724,18 @@
     setupTOCBehavior()
     setupNavToggle()
     setupSearch()
+    setupThemeToggle()
+    // Highlight nav - must be assigned here (after DOM is ready, after let declarations)
+    elHighlightNav = document.getElementById('highlightNav')
+    elHighlightCount = document.getElementById('highlightCount')
+    if (elHighlightNav) {
+      elHighlightNav.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-dir]')
+        if (!btn) return
+        if (btn.getAttribute('data-dir') === 'prev') jumpToPrevHighlight()
+        else jumpToNextHighlight()
+      })
+    }
     // Load mermaid runtime lazily. Prefer a vendored local copy embedded into
     // the app (served under /app/vendor/mermaid.min.js) so offline/CI runs can
     // work without network access. Fall back to CDN if a local file is missing.

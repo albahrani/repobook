@@ -25,6 +25,11 @@
       <main class="pane viewer">
         <div class="viewer-top">
           <div id="crumb" class="crumb"></div>
+          <div id="highlightNav" class="highlight-nav" hidden>
+            <button class="highlight-nav-btn" type="button" aria-label="Previous match" data-dir="prev">&uarr;</button>
+            <span class="highlight-nav-count" id="highlightCount"></span>
+            <button class="highlight-nav-btn" type="button" aria-label="Next match" data-dir="next">&darr;</button>
+          </div>
           <div id="status" class="status"></div>
         </div>
         <div id="viewer" class="viewer-content"></div>
@@ -35,6 +40,7 @@
         <div id="toc" class="toc-list" aria-label="Table of contents"></div>
       </aside>
     </div>
+    <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle dark mode"></button>
     <script src="/app/app.js"></script>
   </body>
 </html>
