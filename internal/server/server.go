@@ -24,6 +24,9 @@ import (
 type Options struct {
 	Root string
 
+	// NoIgnore, when true, disables .gitignore filtering so all files are visible.
+	NoIgnore bool
+
 	// RepoAssetHost/RepoAssetPort control the separate server that serves raw
 	// repo files (images, PDFs, etc). This keeps untrusted repo content on a
 	// different origin than the app UI and its API.
@@ -55,9 +58,12 @@ func New(opts Options) (*Server, error) {
 		opts.RepoAssetHost = "127.0.0.1"
 	}
 
-	ig, err := ignore.Load(rootAbs)
-	if err != nil {
-		return nil, err
+	var ig *ignore.Matcher
+	if !opts.NoIgnore {
+		ig, err = ignore.Load(rootAbs)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	hub := watch.NewHub()

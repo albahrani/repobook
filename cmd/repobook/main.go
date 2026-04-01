@@ -20,7 +20,7 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintf(os.Stderr, "Usage: repobook <path> [--host HOST] [--port PORT] [--no-open]\n\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Usage: repobook <path> [--host HOST] [--port PORT] [--no-open] [--no-ignore]\n\n")
 		_, _ = fmt.Fprintf(os.Stderr, "Starts a local Markdown viewer for a repository directory.\n")
 		flag.PrintDefaults()
 	}
@@ -28,6 +28,7 @@ func main() {
 	host := flag.String("host", "127.0.0.1", "Host/interface to bind to")
 	port := flag.Int("port", 0, "Port to listen on (0 = auto)")
 	noOpen := flag.Bool("no-open", false, "Do not open the browser automatically")
+	noIgnore := flag.Bool("no-ignore", false, "Show all files, ignoring .gitignore rules")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
@@ -60,7 +61,7 @@ func main() {
 		fatal(errors.New("path must be a directory"))
 	}
 
-	s, err := server.New(server.Options{Root: root})
+	s, err := server.New(server.Options{Root: root, NoIgnore: *noIgnore})
 	if err != nil {
 		fatal(err)
 	}
